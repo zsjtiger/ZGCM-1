@@ -1,7 +1,8 @@
 # Source provenance and runtime
 
-The bundled training source uses NVIDIA Megatron-LM commit
-`eba2eaf71d34274c1ca0a59ac5e57a6bf53eb732` (2026-04-07).
+The training source uses NVIDIA Megatron-LM commit
+`eba2eaf71d34274c1ca0a59ac5e57a6bf53eb732` (2026-04-07), taken from
+`pretrain/Megatron-LM`.
 
 The ZGCM-1 training source provides:
 

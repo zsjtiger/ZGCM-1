@@ -6,9 +6,10 @@ respectively, while retaining shorter examples in the longer-context stages.
 Interaction traces are reformulated as MDP state-action transitions, alongside
 code, mathematics, knowledge, reasoning, and instruction data.
 
-This directory contains Megatron-LM based on commit
-`eba2eaf71d34274c1ca0a59ac5e57a6bf53eb732` and the ZGCM-1 long-context training
-implementation. See [Mid-Training Curriculum](docs/MIDTRAIN_STAGES.md) for the
+This directory contains the ZGCM-1 long-context training implementation. It
+runs on the Megatron-LM source at `pretrain/Megatron-LM` (commit
+`eba2eaf71d34274c1ca0a59ac5e57a6bf53eb732`), which is shared with pretrain and
+is used unless `MEGATRON_LM_ROOT` is set. See [Mid-Training Curriculum](docs/MIDTRAIN_STAGES.md) for the
 data mixture, optimization settings, and long-context qualification experiments
 from the technical report.
 
