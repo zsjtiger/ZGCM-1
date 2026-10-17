@@ -40,6 +40,9 @@ For the later stages, set `STAGE_CONFIG` to `configs/stages/02_seq64k.env` or
 `MIDTRAIN_SEQ64K_CHECKPOINT`, respectively, when the preceding output is
 outside the default `TRAIN_ROOT` layout.
 
+To validate a stage and print its exact `torchrun` command without starting
+training, run `python3 scripts/launch_stage.py --dry-run configs/stages/<stage>.env`.
+
 The [stage configurations](configs/stages/) declare the model, optimizer,
 parallelism, and runtime inputs. Data, tokenizer files, generated data manifests,
 and checkpoints are supplied through the environment.

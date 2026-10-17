@@ -37,7 +37,10 @@ bash scripts/launch_train.sh configs/stages/02_pretrain_3p2t_global_shuffle.env
 The [stage configuration directory](configs/stages/) contains runtime,
 architecture, optimizer, parallelism, data, and checkpoint settings. The
 launcher loads the selected environment file and initializes its repository
-root before starting distributed training.
+root before starting distributed training. Add `--dry-run` to the command
+(`python3 scripts/launch_stage.py --dry-run configs/stages/<stage>.env`) to
+validate the environment and print the exact `torchrun` command without
+starting training.
 
 Data, tokenizer files, checkpoints, caches, and logs are supplied through the
 stage environment. Override `PRETRAIN_1T_DATA_PREFIX`,
