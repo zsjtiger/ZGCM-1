@@ -103,6 +103,8 @@ def build_pretraining_data_loader(dataset, consumed_samples):
         extra_kwargs = {"collate_fn": lambda x: x,}
     else:
         extra_kwargs = {}
+    if args.num_workers > 0 and os.getenv("MEGATRON_DATALOADER_PREFETCH_FACTOR"):
+        extra_kwargs["prefetch_factor"] = int(os.getenv("MEGATRON_DATALOADER_PREFETCH_FACTOR"))
     return torch.utils.data.DataLoader(
         dataset,
         batch_sampler=batch_sampler,
