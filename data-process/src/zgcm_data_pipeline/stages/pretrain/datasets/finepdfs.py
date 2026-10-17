@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from ....core import PipelineContext, Step
+from ....profiles import resolve_profile
 from ....models import Decision, Sample
 
 
@@ -42,10 +43,11 @@ def clean_finepdfs_record(sample: Sample, context: PipelineContext) -> Sample:
     lid = _number(data, ("lid_score", "language_score", "language_probability", "language_confidence"))
     minhash = _number(data, ("minhash_count", "minhash_matches", "minhash_overlap"))
     primary = _number(data, ("primary_score", "quality_score", "edu_score", "pdf_quality_score"))
+    params = resolve_profile(context.config, "pretrain", "finepdfs")
     thresholds = {
-        "lid": float(context.config.get("finepdfs_lid_threshold", 0.85)),
-        "minhash": float(context.config.get("finepdfs_minhash_max", 2.0)),
-        "primary": float(context.config.get("finepdfs_primary_threshold", 0.8)),
+        "lid": float(params["lid_threshold"]),
+        "minhash": float(params["minhash_max"]),
+        "primary": float(params["primary_threshold"]),
     }
     if lid is not None:
         sample.metrics["finepdfs_lid_score"] = lid

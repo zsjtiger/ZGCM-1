@@ -22,6 +22,7 @@ data-process/
 │   ├── models.py                          # Stage, category, decision, and Sample models
 │   ├── core.py                            # Pipeline, Step, and PipelineContext
 │   ├── adapters.py                        # Raw fields → canonical Sample adapter
+│   ├── profiles.py                        # Dataset-profile parameters: JSON defaults plus run overrides
 │   ├── storage/                           # JSONL I/O, release records, manifests, validation
 │   ├── algorithms/                        # SimHash near-deduplication (pure)
 │   ├── sampling.py                        # Stable partitions, quotas, prefix mixes (pure)
@@ -127,7 +128,7 @@ Stage profile commands are shown in each stage README. After installation, the c
 
 ## Configuration and length mixing
 
-`examples/quality-policies.json` shows category quality thresholds and optional near deduplication. License review can be enabled with `--require-license` or `require_license` in a JSON configuration. Dataset profiles accept their own namespaced settings, such as `finepdfs_*`, `olmocr_*`, `web_knowledge_*`, and `dolci_think_*`.
+`examples/quality-policies.json` shows category quality thresholds and optional near deduplication. License review can be enabled with `--require-license` or `require_license` in a JSON configuration. Dataset profiles accept their own namespaced settings, such as `finepdfs_*`, `olmocr_*`, `web_knowledge_*`, and `dolci_think_*`. Each profile's defaults are in `src/zgcm_data_pipeline/stages/<stage>/profiles/<profile>.json`; a run overrides any parameter with the same name, for example `"finepdfs_lid_threshold": 0.5` in the `--config` JSON.
 
 Without an injected training tokenizer, shared steps use a reproducible token estimate. Production integration should provide the target tokenizer, chat template, indexed writer, and loader validation.
 

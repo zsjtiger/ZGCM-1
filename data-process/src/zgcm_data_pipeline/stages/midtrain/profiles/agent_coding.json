@@ -1,0 +1,8 @@
+{
+  "length_boundaries": [
+    [16384, "le16k"],
+    [65536, "gt16k_le64k"],
+    [262144, "gt64k_le256k"]
+  ],
+  "overflow_length_label": "gt256k"
+}

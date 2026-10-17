@@ -1,0 +1,8 @@
+{
+  "strict": true,
+  "repetition_min_words": 120,
+  "repetition_ngram": 5,
+  "repetition_max_ratio": 0.2,
+  "review_rough_tokens": 16000,
+  "max_rough_tokens": 32768
+}

@@ -8,6 +8,7 @@ from typing import Any
 
 from ....core import PipelineContext, Step
 from ....models import Decision, Sample
+from ....profiles import resolve_profile
 
 
 DEDUP_PRIORITY = {
@@ -17,15 +18,15 @@ DEDUP_PRIORITY = {
 }
 
 
-def rough_length_bucket(chars: int) -> str:
+def rough_length_bucket(chars: int, params: Mapping[str, Any] | None = None) -> str:
+    """Length bucket for a trace from its character count (about 3.6 characters per token)."""
+    if params is None:
+        params = resolve_profile({}, "midtrain", "agent_coding")
     tokens = max(1, int(chars / 3.6))
-    if tokens <= 16_384:
-        return "le16k"
-    if tokens <= 65_536:
-        return "gt16k_le64k"
-    if tokens <= 262_144:
-        return "gt64k_le256k"
-    return "gt256k"
+    for upper, label in params["length_boundaries"]:
+        if tokens <= int(upper):
+            return str(label)
+    return str(params["overflow_length_label"])
 
 
 def source_keys(data: Mapping[str, Any]) -> set[str]:
@@ -64,7 +65,7 @@ def clean_agent_coding_record(sample: Sample, context: PipelineContext) -> Sampl
     data["text"] = text
     data["text_chars"] = chars
     data["rough_tokens_chars_div_3_6"] = rough_tokens
-    data["length_bucket"] = rough_length_bucket(chars)
+    data["length_bucket"] = rough_length_bucket(chars, resolve_profile(context.config, "midtrain", "agent_coding"))
     data["dedup_text_sha256"] = digest
     data["pre_rendered_agent_trace"] = True
     data.setdefault("training_tags", ["agentic", "coding", "agent_trace"])

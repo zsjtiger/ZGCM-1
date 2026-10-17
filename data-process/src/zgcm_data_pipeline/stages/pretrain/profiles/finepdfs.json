@@ -1,0 +1,5 @@
+{
+  "lid_threshold": 0.85,
+  "minhash_max": 2.0,
+  "primary_threshold": 0.8
+}

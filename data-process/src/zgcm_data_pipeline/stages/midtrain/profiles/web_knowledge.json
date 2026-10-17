@@ -1,0 +1,14 @@
+{
+  "quality_bands": [
+    {"min": 4.0, "label": "ge4"},
+    {"min": 3.0, "label": "ge3"}
+  ],
+  "default_band": "lt3",
+  "min_quality_band": "lt3",
+  "length_boundaries": [
+    [16384, "le_16k"],
+    [65536, "gt_16k_le_64k"],
+    [262144, "gt_64k_le_256k"]
+  ],
+  "overflow_length_label": "gt_256k"
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import zlib
 
 from ....core import PipelineContext, Step
+from ....profiles import resolve_profile
 from ....models import Decision, Sample
 
 
@@ -24,7 +25,8 @@ def clean_olmocr_record(sample: Sample, context: PipelineContext) -> Sample:
     sample.text_fields = ("text",)
     ratio = compression_ratio(text)
     sample.metrics["olmocr_zlib_ratio"] = ratio
-    threshold = float(context.config.get("olmocr_min_compression_ratio", 0.08))
+    params = resolve_profile(context.config, "pretrain", "olmocr")
+    threshold = float(params["min_compression_ratio"])
     if ratio < threshold:
         sample.mark(Decision.DROP, "olmocr_low_compression_ratio")
     score = data.get("edu_score")
@@ -35,7 +37,7 @@ def clean_olmocr_record(sample: Sample, context: PipelineContext) -> Sample:
             sample.mark(Decision.REVIEW, "olmocr_invalid_edu_score")
         else:
             sample.metrics["olmocr_edu_score"] = score_value
-            if score_value < float(context.config.get("olmocr_min_edu_score", 0.6)):
+            if score_value < float(params["min_edu_score"]):
                 sample.mark(Decision.DROP, "olmocr_low_edu_score")
     sample.buckets["olmocr_policy"] = "compression_ratio_ge_0p08"
     return sample

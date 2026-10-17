@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from collections.abc import Mapping
 from typing import Any
 
 from ....core import PipelineContext, Step
 from ....models import Decision, Sample
+from ....profiles import resolve_profile
 
 
 SOURCE_LABELS = {
@@ -60,14 +62,18 @@ def parse_assistant(content: str) -> tuple[str | None, str | None, str | None]:
     return reasoning, answer, None
 
 
-def has_repetition(text: str) -> bool:
+def has_repetition(text: str, params: Mapping[str, Any] | None = None) -> bool:
+    """True when repeated word n-grams make up more than the profile's share of the text."""
+    if params is None:
+        params = resolve_profile({}, "posttrain", "dolci_think")
     words = WORD_RE.findall((text or "").casefold())
-    if len(words) < 120:
+    if len(words) < int(params["repetition_min_words"]):
         return False
-    grams = [" ".join(words[index : index + 5]) for index in range(len(words) - 4)]
+    size = int(params["repetition_ngram"])
+    grams = [" ".join(words[index : index + size]) for index in range(len(words) - size + 1)]
     counts = Counter(grams)
     repeated = sum(count - 1 for count in counts.values() if count > 1)
-    return repeated / max(1, len(grams)) > 0.20
+    return repeated / max(1, len(grams)) > float(params["repetition_max_ratio"])
 
 
 def clean_dolci_think_record(sample: Sample, context: PipelineContext) -> Sample:
@@ -84,7 +90,8 @@ def clean_dolci_think_record(sample: Sample, context: PipelineContext) -> Sample
         return sample
     cleaned: list[dict[str, Any]] = []
     rendered_tokens = 0
-    strict = bool(context.config.get("dolci_think_strict", True))
+    params = resolve_profile(context.config, "posttrain", "dolci_think")
+    strict = bool(params["strict"])
     for raw in messages:
         if not isinstance(raw, dict):
             sample.mark(Decision.DROP, "dolci_think_bad_message_object")
@@ -99,17 +106,17 @@ def clean_dolci_think_record(sample: Sample, context: PipelineContext) -> Sample
             answer = answer or ""
             if TEMPLATE_TOKEN_RE.search(content):
                 sample.mark(Decision.DROP if strict else Decision.REVIEW, "dolci_think_template_token")
-            if has_repetition(reasoning) or has_repetition(answer):
+            if has_repetition(reasoning, params) or has_repetition(answer, params):
                 sample.mark(Decision.DROP if strict else Decision.REVIEW, "dolci_think_repetition")
             cleaned.append({"role": "assistant", "content": answer, "reasoning_content": reasoning})
             rendered_tokens += rough_tokens(reasoning) + rough_tokens(answer) + 4
         else:
             cleaned.append({"role": role, "content": content})
             rendered_tokens += rough_tokens(content)
-    maximum = int(context.config.get("dolci_think_max_rough_tokens", 32_768))
+    maximum = int(params["max_rough_tokens"])
     if rendered_tokens > maximum:
         sample.mark(Decision.DROP, "dolci_think_over_length")
-    elif rendered_tokens > int(context.config.get("dolci_think_review_rough_tokens", 16_000)):
+    elif rendered_tokens > int(params["review_rough_tokens"]):
         sample.mark(Decision.REVIEW, "dolci_think_long_record")
     data["messages"] = cleaned
     data["source"] = label

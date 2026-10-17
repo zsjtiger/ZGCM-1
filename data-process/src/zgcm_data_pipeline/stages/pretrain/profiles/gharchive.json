@@ -1,0 +1,7 @@
+{
+  "max_file_bytes": 0,
+  "minified_min_chars": 2000,
+  "minified_longest_line": 200000,
+  "minified_few_lines": 10,
+  "minified_average_line": 1000
+}

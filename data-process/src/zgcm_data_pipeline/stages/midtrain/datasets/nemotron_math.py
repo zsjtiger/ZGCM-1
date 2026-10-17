@@ -8,6 +8,7 @@ from typing import Any
 
 from ....core import PipelineContext, Step
 from ....models import Decision, Sample
+from ....profiles import resolve_profile
 
 
 def record_drop_key(data: Mapping[str, Any]) -> tuple[str, int] | None:
@@ -70,9 +71,10 @@ def _hard_error_score(data: Mapping[str, Any]) -> float | None:
 def clean_nemotron_math_record(sample: Sample, context: PipelineContext) -> Sample:
     """Drop records listed by lineage key or carrying a strict high-risk score."""
     key = record_drop_key(sample.data)
-    configured_keys = normalize_drop_keys(context.config.get("nemotron_math_drop_keys", ()))
+    params = resolve_profile(context.config, "midtrain", "nemotron_math")
+    configured_keys = normalize_drop_keys(params["drop_keys"])
     score = _hard_error_score(sample.data)
-    threshold = float(context.config.get("nemotron_math_hard_error_threshold", 4.0))
+    threshold = float(params["hard_error_threshold"])
     if key is not None:
         sample.data["nemotron_math_drop_key"] = [key[0], key[1]]
     else:

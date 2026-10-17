@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from pathlib import PurePosixPath
+from typing import Any
 
 from ....core import PipelineContext, Step
 from ....models import Decision, Sample
+from ....profiles import resolve_profile
 
 
 LANGUAGE_BY_EXTENSION = {
@@ -219,15 +222,20 @@ def normalize_notebook(text: str) -> str:
     return "\n\n".join(chunks).strip()
 
 
-def is_minified(text: str) -> bool:
-    if len(text) < 2_000:
+def is_minified(text: str, params: Mapping[str, Any] | None = None) -> bool:
+    """Detect minified or generated single-line assets using the profile thresholds."""
+    if params is None:
+        params = resolve_profile({}, "pretrain", "gharchive")
+    if len(text) < int(params["minified_min_chars"]):
         return False
     lines = text.splitlines()
     if not lines:
         return False
     longest = max(len(line) for line in lines)
     average = sum(len(line) for line in lines) / len(lines)
-    return longest > 200_000 or (len(lines) < 10 and average > 1_000)
+    return longest > int(params["minified_longest_line"]) or (
+        len(lines) < int(params["minified_few_lines"]) and average > float(params["minified_average_line"])
+    )
 
 
 def clean_gharchive_record(sample: Sample, context: PipelineContext) -> Sample:
@@ -245,10 +253,11 @@ def clean_gharchive_record(sample: Sample, context: PipelineContext) -> Sample:
         sample.mark(Decision.DROP, "gharchive_binary_nul")
         return sample
     size_bytes = int(data.get("length_bytes") or metadata.get("length_bytes") or len(text.encode("utf-8")))
+    params = resolve_profile(context.config, "pretrain", "gharchive")
     reason = reject_path_reason(
         path,
         size_bytes,
-        max_file_bytes=int(context.config.get("gharchive_max_file_bytes", 0)),
+        max_file_bytes=int(params["max_file_bytes"]),
     )
     if reason:
         sample.mark(Decision.DROP, f"gharchive_{reason}")
@@ -263,7 +272,7 @@ def clean_gharchive_record(sample: Sample, context: PipelineContext) -> Sample:
     if any(marker in prefix for marker in GENERATED_MARKERS):
         sample.mark(Decision.DROP, "gharchive_generated_file")
         return sample
-    if is_minified(text):
+    if is_minified(text, params):
         sample.mark(Decision.DROP, "gharchive_minified_or_long_line")
         return sample
 
