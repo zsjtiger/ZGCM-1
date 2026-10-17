@@ -320,6 +320,7 @@ def core_gpt_dataset_config_from_args(args):
         "data_parallel_size": args.data_parallel_size,
         "sequence_parallel_size": args.tensor_model_parallel_size*args.sequence_parallel,
         "hybrid_context_parallel": args.hybrid_context_parallel,
+        "sequential_access": os.getenv("MEGATRON_GPT_DATASET_SEQUENTIAL", "0") == "1",
     }
 
     # add FIM args to the config

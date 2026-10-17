@@ -76,6 +76,9 @@ class GPTDatasetConfig(BlendedMegatronDatasetConfig):
     context_parallel_size: Optional[int] = None
     """The size of the context parallel group. Needed for padding in packed sequences."""
 
+    sequential_access: bool = False
+    """If True, preserve the natural document/sample order instead of shuffling."""
+
     def __post_init__(self) -> None:
         """Do asserts and set fields post init"""
         super().__post_init__()
@@ -192,6 +195,10 @@ class GPTDataset(MegatronDataset):
             sequences_per_dataset=sequences_per_dataset,
             dtype_code=config.token_dtype_code,
         )
+
+    @staticmethod
+    def _key_config_attributes():
+        return MegatronDataset._key_config_attributes() + ["sequential_access"]
 
     def __len__(self) -> int:
         """Abstract method implementation
@@ -494,10 +501,20 @@ class GPTDataset(MegatronDataset):
             )
 
             numpy_random_state = numpy.random.RandomState(self.config.random_seed)
+            if self.config.sequential_access:
+                log_single_rank(
+                    logger,
+                    logging.INFO,
+                    "GPTDataset sequential_access enabled: preserving document/sample order",
+                )
 
             # Build the document index
             document_index = _build_document_index(
-                self.indices, num_epochs, numpy_random_state, separate_final_epoch
+                self.indices,
+                num_epochs,
+                numpy_random_state,
+                separate_final_epoch,
+                self.config.sequential_access,
             )
 
             # Build the sample index
@@ -534,11 +551,17 @@ class GPTDataset(MegatronDataset):
             # Build the shuffle index
             if separate_final_epoch:
                 shuffle_index = _build_shuffle_index(
-                    num_samples_sans_final_epoch, sample_index.shape[0] - 1, numpy_random_state
+                    num_samples_sans_final_epoch,
+                    sample_index.shape[0] - 1,
+                    numpy_random_state,
+                    self.config.sequential_access,
                 )
             else:
                 shuffle_index = _build_shuffle_index(
-                    sample_index.shape[0] - 1, sample_index.shape[0] - 1, numpy_random_state
+                    sample_index.shape[0] - 1,
+                    sample_index.shape[0] - 1,
+                    numpy_random_state,
+                    self.config.sequential_access,
                 )
 
             if path_to_cache:
@@ -642,6 +665,7 @@ def _build_document_index(
     num_epochs: int,
     numpy_random_state: numpy.random.RandomState,
     separate_final_epoch: bool,
+    sequential_access: bool = False,
 ) -> numpy.ndarray:
     """Build an array with length = num epochs * num documents
 
@@ -663,16 +687,22 @@ def _build_document_index(
         document_index[:] = documents
         document_index = document_index.reshape(-1)
         document_index = document_index.astype(numpy.int32)
-        numpy_random_state.shuffle(document_index)
+        if not sequential_access:
+            numpy_random_state.shuffle(document_index)
         return document_index
 
-    doc_idx_first = _build_document_index(documents, num_epochs - 1, numpy_random_state, False)
-    doc_idx_last = _build_document_index(documents, 1, numpy_random_state, False)
+    doc_idx_first = _build_document_index(
+        documents, num_epochs - 1, numpy_random_state, False, sequential_access
+    )
+    doc_idx_last = _build_document_index(documents, 1, numpy_random_state, False, sequential_access)
     return numpy.concatenate((doc_idx_first, doc_idx_last))
 
 
 def _build_shuffle_index(
-    num_samples: int, total_size: int, numpy_random_state: numpy.random.RandomState
+    num_samples: int,
+    total_size: int,
+    numpy_random_state: numpy.random.RandomState,
+    sequential_access: bool = False,
 ) -> numpy.ndarray:
     """Build the range [0, size) and shuffle
 
@@ -693,12 +723,14 @@ def _build_shuffle_index(
         dtype_ = numpy.int64
 
     shuffle_idx_first = numpy.arange(start=0, stop=num_samples, step=1, dtype=dtype_)
-    numpy_random_state.shuffle(shuffle_idx_first)
+    if not sequential_access:
+        numpy_random_state.shuffle(shuffle_idx_first)
     if num_samples == total_size:
         return shuffle_idx_first
 
     shuffle_idx_last = numpy.arange(start=num_samples, stop=total_size, step=1, dtype=dtype_)
-    numpy_random_state.shuffle(shuffle_idx_last)
+    if not sequential_access:
+        numpy_random_state.shuffle(shuffle_idx_last)
 
     return numpy.concatenate((shuffle_idx_first, shuffle_idx_last))
 

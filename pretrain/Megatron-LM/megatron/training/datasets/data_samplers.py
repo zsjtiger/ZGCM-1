@@ -3,6 +3,7 @@
 """Dataloaders."""
 
 
+import os
 import random
 
 import numpy as np
@@ -22,6 +23,9 @@ def build_pretraining_data_loader(dataset, consumed_samples):
     if dataset is None:
         return None
     args = get_args()
+    sample_offset = int(os.getenv("MEGATRON_DATASET_SAMPLE_OFFSET", "0"))
+    if sample_offset:
+        consumed_samples = max(0, consumed_samples - sample_offset)
 
     if hasattr(dataset, 'split'):
         split = dataset.split
