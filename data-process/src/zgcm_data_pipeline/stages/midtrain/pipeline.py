@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
-from ...adapters import DatasetAdapter
-from ...common.manifest import build_manifest, write_manifest
-from ...common.io import iter_jsonl, write_jsonl
-from ...core import Pipeline, PipelineContext
+from ...core import Pipeline
 from ...models import DataCategory, Stage
 from ...pipelines import build_pipeline as build_category_pipeline
-from ...steps.common import release_record
+from ...runner import run_pipeline_file
 from .datasets import dataset_steps
 
 
@@ -44,38 +40,23 @@ def run_jsonl(
     include_dropped: bool = False,
     manifest_path: Path | None = None,
 ) -> dict[str, Any]:
-    """Run a category pipeline using only explicit file/config arguments."""
+    """Run a Midtrain category pipeline using only explicit file/config arguments."""
     key = str(category).strip().lower()
-    adapter = DatasetAdapter(
-        dataset=dataset,
+    return run_pipeline_file(
+        build_pipeline(key, dataset_profile),
         stage=Stage.MIDTRAIN,
         category=DataCategory(key),
+        dataset=dataset,
+        input_path=input_path,
+        output_path=output_path,
         id_field=id_field,
         text_fields=text_fields,
+        config=config,
+        dataset_profile=dataset_profile,
+        include_dropped=include_dropped,
+        manifest_path=manifest_path,
+        summary_fields={"category": key},
     )
-    context = PipelineContext(config=dict(config or {}))
-    pipeline = build_pipeline(key, dataset_profile)
-    records = (release_record(sample) for sample in pipeline.run(adapter.adapt_many(iter_jsonl(input_path)), context, include_dropped=include_dropped))
-    written = write_jsonl(output_path, records)
-    summary: dict[str, Any] = {
-        "stage": Stage.MIDTRAIN.value,
-        "category": key,
-        "dataset": dataset,
-        "dataset_profile": dataset_profile,
-        "written": written,
-        "pipeline": pipeline.step_names(),
-        "counters": dict(context.counters),
-    }
-    if manifest_path is not None:
-        write_manifest(manifest_path, build_manifest(_read_jsonl(output_path), stage=Stage.MIDTRAIN.value, output=output_path.name))
-        summary["manifest"] = manifest_path.name
-    return summary
-
-
-def _read_jsonl(path: Path) -> Iterable[dict[str, Any]]:
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            yield json.loads(line)
 
 
 __all__ = ["MIDTRAIN_CATEGORIES", "build_pipeline", "run_jsonl"]

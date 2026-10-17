@@ -19,19 +19,29 @@ data-process/
 │   ├── README.md
 │   └── smoke_test.py                      # End-to-end smoke test for four CLIs
 ├── src/zgcm_data_pipeline/
-│   ├── common/                            # Shared schema, quality, dedup, length, manifest helpers
-│   ├── steps/                             # Code/web/instruction/etc. category steps
-│   ├── stages/
-│   │   ├── pretrain/                      # Code, PDF/OCR, and general text
-│   │   ├── midtrain/                      # Category cleaning and length mixing
-│   │   └── posttrain/                     # SFT messages, tools, and packing
-│   ├── adapters.py                        # Raw fields → canonical Sample adapter
-│   ├── core.py                            # Pipeline, Step, and PipelineContext
 │   ├── models.py                          # Stage, category, decision, and Sample models
-│   └── training.py                        # Tokenization/packing/loss-mask interfaces
+│   ├── core.py                            # Pipeline, Step, and PipelineContext
+│   ├── adapters.py                        # Raw fields → canonical Sample adapter
+│   ├── storage/                           # JSONL I/O, release records, manifests, validation
+│   ├── algorithms/                        # SimHash near-deduplication (pure)
+│   ├── sampling.py                        # Stable partitions, quotas, prefix mixes (pure)
+│   ├── packing.py                         # SFT packing and loss masks (pure)
+│   ├── scheduling.py                      # Work-unit balancing and row microshards (pure)
+│   ├── steps/                             # Shared steps (text, provenance, dedup, quality, length) and category steps
+│   ├── pipelines.py                       # Category pipeline assembly
+│   ├── runner.py                          # File-to-file runner shared by every stage
+│   ├── stages/
+│   │   ├── pretrain/                      # Code, PDF/OCR, and general text sources
+│   │   ├── midtrain/                      # Category cleaning, length buckets, mixing
+│   │   └── posttrain/                     # SFT messages, tools, and packing
+│   ├── cli.py                             # Generic category CLI
+│   └── io.py, dedup.py, quality.py,       # Compatibility aliases for earlier imports
+│       training.py, stages/midtrain/mix.py
 ├── tests/
 └── docs/                                  # Public category inventory and pipeline diagram
 ```
+
+Dependencies point one way: `models`/`core` ← `storage`, `algorithms`, `sampling`, `packing`, `scheduling` ← `steps` ← `runner`/`pipelines` ← `stages`/`cli`. `tests/test_architecture.py` enforces this.
 
 Example fields and expected behavior are documented in [`examples/README.md`](examples/README.md). The local helper script is documented in [`scripts/README.md`](scripts/README.md).
 
@@ -121,7 +131,7 @@ Stage profile commands are shown in each stage README. After installation, the c
 
 Without an injected training tokenizer, shared steps use a reproducible token estimate. Production integration should provide the target tokenizer, chat template, indexed writer, and loader validation.
 
-Midtrain `buckets.py` assigns `B16`, `B64`, and `B256` base buckets. `mix.py` uses stable hashing to construct disjoint prefix mixes:
+Midtrain `buckets.py` assigns `B16`, `B64`, and `B256` base buckets. `sampling.prefix_sample_mix` uses stable hashing to construct disjoint prefix mixes:
 
 ```text
 mix16  ← B16

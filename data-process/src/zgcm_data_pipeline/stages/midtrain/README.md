@@ -11,7 +11,7 @@ The shared Midtrain pipeline is the governance layer for AI-assisted cleaning. A
 | [`cli.py`](cli.py) | Stage CLI `zgcm-midtrain-clean`; handles arguments, configuration, and JSONL/manifest output. |
 | [`pipeline.py`](pipeline.py) | Validates the category, prepends the dataset profile, appends the category pipeline, and exposes `run_jsonl()`. |
 | [`buckets.py`](buckets.py) | Assigns base length buckets using 16K, 64K, and 256K token boundaries. |
-| [`mix.py`](mix.py) | Uses stable hashing for disjoint `mix16`/`mix64`/`mix256` prefix sampling. |
+| [`../../sampling.py`](../../sampling.py) | Uses stable hashing for disjoint `mix16`/`mix64`/`mix256` prefix sampling (`prefix_sample_mix`). |
 | [`datasets/web_knowledge.py`](datasets/web_knowledge.py) | Reads web/knowledge quality scores and token counts, then assigns quality bands and length buckets. |
 | [`datasets/nemotron_math.py`](datasets/nemotron_math.py) | Filters Math records by `(source_file, row_index)` drop keys and hard-error scores. |
 | [`datasets/agent_coding.py`](datasets/agent_coding.py) | Normalizes pre-rendered agent-coding traces and records rough length, dedup, lineage, completion, and priority metadata. |

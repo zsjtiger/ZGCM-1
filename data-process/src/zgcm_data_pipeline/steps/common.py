@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 import unicodedata
-from typing import Any
 
 from ..core import PipelineContext, Step
-from ..dedup import NearDeduper
+from ..algorithms.simhash import NearDeduper
 from ..models import Decision, Sample
-from ..quality import apply_quality_policy
+from ..storage.release import stable_hash
+from .quality import apply_quality_policy
 
 
 _WHITESPACE = re.compile(r"[\t\f\v ]+")
@@ -20,8 +18,6 @@ _SECRET = re.compile(
 )
 
 
-def stable_hash(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def normalize_text_value(value: str) -> str:
@@ -156,13 +152,6 @@ def finalize_quality_bucket(sample: Sample, context: PipelineContext) -> Sample:
     return sample
 
 
-def release_record(sample: Sample) -> dict[str, Any]:
-    """Stable serialized form used by materializers and manifests."""
-    result = sample.as_dict()
-    result["record_sha256"] = stable_hash(
-        json.dumps(result["data"], ensure_ascii=False, sort_keys=True, default=str)
-    )
-    return result
 
 
 COMMON_PREFIX = (

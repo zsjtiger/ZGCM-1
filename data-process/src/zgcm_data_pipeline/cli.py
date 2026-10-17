@@ -6,11 +6,11 @@ from pathlib import Path
 
 from .adapters import DatasetAdapter
 from .core import PipelineContext
-from .io import iter_jsonl, write_jsonl
+from .storage.jsonl import iter_jsonl, write_jsonl
 from .models import DataCategory, Stage
 from .pipelines import build_pipeline
-from .steps.common import release_record
-from .common.manifest import build_manifest, write_manifest
+from .storage.manifest import build_manifest, write_manifest
+from .storage.release import release_record
 
 
 def build_parser() -> argparse.ArgumentParser:
